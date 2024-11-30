@@ -1,0 +1,45 @@
+# Core ML and AI
+torch==2.5.1
+torchvision==0.20.1
+torchaudio==2.5.1
+transformers==4.46.3
+sentence-transformers==3.3.1
+datasets==3.1.0
+scikit-learn==1.5.2
+safetensors==0.4.5
+huggingface-hub==0.26.2
+openai==1.55.2
+
+# PDF Processing
+PyPDF2==3.0.1
+chromadb==0.5.20
+
+# API and Web Framework
+fastapi==0.115.5
+uvicorn[standard]==0.32.1  # Added with [standard] for better performance
+python-multipart==0.0.6    # Helpful for FastAPI file uploads
+httptools==0.6.4           # For uvicorn
+uvloop==0.21.0            # For uvicorn
+websockets==14.1          # For uvicorn
+watchfiles==1.0.0         # For uvicorn auto-reload
+streamlit==1.40.2
+starlette==0.41.3
+pydantic==2.10.2
+
+# Data Processing
+numpy==2.1.3
+pandas==2.2.3
+pillow==11.0.0
+python-dotenv==1.0.1
+
+# Utilities
+tqdm==4.67.1
+requests==2.32.3
+aiohttp==3.11.8
+tokenizers==0.20.3
+protobuf==5.29.0
+accelerate==1.1.1
+
+# Optional but recommended
+nltk
+regex==2024.11.6

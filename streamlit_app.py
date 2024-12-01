@@ -99,6 +99,10 @@ def select_chat_mode():
         )
         add_message("system", mode_message)
 
+
+def clear_chat():
+    """Clear the chat history"""
+    st.session_state.chat_history = []
 def main():
     st.set_page_config(page_title="PDF Chat Assistant", layout="wide")
     st.title("PDF Chat Assistant")
@@ -106,6 +110,7 @@ def main():
     # Sidebar for PDF upload and mode selection
     with st.sidebar:
         st.header("Upload PDF")
+        # Add Clear Chat button at the top of sidebar
         uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 
         if uploaded_file:

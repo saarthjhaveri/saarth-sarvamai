@@ -24,7 +24,7 @@ class InitializeRequest(BaseModel):
 app = FastAPI()
 client = OpenAI()
 pdf_processor = PDFProcessor()
-query_router = SmartQueryRouter()
+# query_router = SmartQueryRouter()
 
 
 @app.post("/smart-ask", response_model=QueryResponse)
@@ -39,23 +39,29 @@ async def smart_answer_question(query: Query):
         
         if classification["category"] == "document_query":
             if pdf_processor.collection is None:
+                print("system is not initialised properly" , pdf_processor.collection)
                 raise HTTPException(
                     status_code=400,
                     detail="System not initialized. Please call /initialize endpoint first"
                 )
             
+            print("inside document_query ")
             # Get relevant chunks from ChromaDB
-            similar_chunks = query_similar_chunks(query.question, pdf_processor.collection)
+            similar_chunks, is_relevant = query_similar_chunks(query.question, pdf_processor.collection)
+            context = similar_chunks['documents'][0][0]
+            relevance_note = "" if is_relevant else "\n\nNote: The available context might not be directly relevant to your question. This answer is based on the closest matching content found in the document."
+
+            print("context ", similar_chunks['documents'][0][0])
             
             # Create a prompt with the context
             prompt = f"""Based on the following context, answer the question.
             
             Context:
-            {similar_chunks['documents'][0]}
+            {context}
             
             Question: {query.question}
             
-            Answer:"""
+            Answer:{relevance_note}"""
             
             system_prompt = "You are a helpful physics teacher."
             
@@ -92,6 +98,7 @@ async def initialize_system(request: InitializeRequest):
     try:
         # Process PDF and initialize ChromaDB
         pdf_processor.process_pdf(request.pdf_path)
+        print("System intialised Successfully ")
         return {"status": "success", "message": "System initialized successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Initialization failed: {str(e)}")
@@ -99,24 +106,31 @@ async def initialize_system(request: InitializeRequest):
 @app.post("/ask")
 async def answer_question(query: Query):
     """Answer questions based on the PDF content"""
+
+
+    print("Entering inside the ask function ")
     if pdf_processor.collection is None:
+        print("Error status 400 becasue the sytem is not Initialised")
         raise HTTPException(
             status_code=400, 
             detail="System not initialized. Please call /initialize endpoint first"
         )
     
     # Get relevant chunks from ChromaDB
-    similar_chunks = query_similar_chunks(query.question, pdf_processor.collection)
+    similar_chunks, is_relevant = query_similar_chunks(query.question, pdf_processor.collection)
+    context = similar_chunks['documents'][0][0]
+    relevance_note = "" if is_relevant else "\n\nNote: The available context might not be directly relevant to your question. This answer is based on the closest matching content found in the document."
+    
     
     # Create a prompt with the context
     prompt = f"""Based on the following context, answer the question.
     
     Context:
-    {similar_chunks['documents'][0]}
+    {context}
     
     Question: {query.question}
     
-    Answer:"""
+    Answer:{relevance_note}"""
     
     # Get response from LLM
     response = client.chat.completions.create(
@@ -127,12 +141,15 @@ async def answer_question(query: Query):
         ]
     )
 
-    print("response recieved is ", response)
-    print('\n\n\n')
 
-
+    llm_response = response.choices[0].message.content
+    final_response = llm_response if is_relevant else f"{llm_response}\n\nNote: The available context might not be directly relevant to your question. This answer is based on the closest matching content found in the document."
     
-    return {"answer": response.choices[0].message.content}
+    # print("response recieved is ", response)
+    # print('\n\n\n')
+
+
+    return {"answer": final_response}
 
 @app.get("/status")
 async def get_status():

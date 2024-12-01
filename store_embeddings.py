@@ -83,14 +83,24 @@ def store_embeddings_in_chroma(embeddings_data, collection_name="pdf_qa_collecti
     print(f"Stored {len(documents)} chunks in ChromaDB")
     return collection
 
-def query_similar_chunks(query_text, collection, n_results=3):
-    """Query the database for similar chunks"""
+def query_similar_chunks(query_text, collection, n_results=3, distance_threshold=0.5):
+    """
+    Query the database for similar chunks
+    Returns a tuple of (results, is_relevant) where is_relevant indicates if the best match is close enough
+    """
     results = collection.query(
         query_texts=[query_text],
         n_results=n_results
     )
-
-    print("results is ", results)
-
     
-    return results
+    # Check if we have any results and if the best match (smallest distance) is within threshold
+    is_relevant = True
+    if results['distances'] and results['distances'][0]:
+        best_distance = results['distances'][0][0]
+        is_relevant = best_distance <= distance_threshold
+
+    print("is relevant ", is_relevant)
+    print("results are ", results)
+    
+    
+    return results, is_relevant

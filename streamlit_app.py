@@ -85,70 +85,6 @@ def display_tool_result(result_type: str, data: dict):
         if result_type == "create_flashcards":
             st.subheader("Flashcards")
             flashcards = data.get("flashcards", [])
-            for i, card in enumerate(flashcards, 1):
-                with st.expander(f"Flashcard {i}"):
-                    st.markdown("**Question:**")
-                    st.write(card["front"])
-                    st.markdown("**Answer:**")
-                    st.write(card["back"])
-
-        elif result_type == "generate_practice":
-            st.subheader("Practice Problems")
-            problems = data.get("problems", [])
-            for i, prob in enumerate(problems, 1):
-                st.markdown(f"**Problem {i}**")
-                st.markdown("**Question:**")
-                st.write(prob["question"])
-                st.markdown("**Solution:**")
-                st.write(prob["solution"])
-                st.markdown("**Final Answer:**")
-                st.write(prob["final_answer"])
-                st.markdown("**Explanation:**")
-                st.write(prob["explanation"])
-                st.divider()  # Add a visual separator between problems
-
-
-        elif result_type == "create_concept_map":
-            st.subheader("Concept Map")
-            central = data.get("central_concept", "")
-            connections = data.get("connections", [])
-            
-            st.markdown(f"**Central Concept:** {central}")
-            for conn in connections:
-                with st.expander(conn["concept"]):
-                    st.markdown(f"**Relationship:** {conn['relationship']}")
-                    st.markdown("**Sub-concepts:**")
-                    for sub in conn.get("sub_concepts", []):
-                        st.write(f"- {sub}")
-
-        elif result_type == "generate_summary":
-            st.subheader("Summary")
-            with st.expander("Main Points"):
-                for point in data.get("main_points", []):
-                    st.write(f"• {point}")
-            
-            with st.expander("Detailed Explanations"):
-                for concept, explanation in data.get("details", {}).items():
-                    st.markdown(f"**{concept}:**")
-                    st.write(explanation)
-            
-            with st.expander("Examples"):
-                for example in data.get("examples", []):
-                    st.write(f"- {example}")
-            
-            if "additional_notes" in data:
-                st.markdown("**Additional Notes:**")
-                st.write(data["additional_notes"])
-
-    except Exception as e:
-        st.error(f"Error displaying tool result: {str(e)}")
-
-def display_tool_result(result_type: str, data: dict):
-    """Display various tool results in an organized manner"""
-    try:
-        if result_type == "create_flashcards":
-            st.subheader("Flashcards")
-            flashcards = data.get("flashcards", [])
             
             # Create columns for navigation
             col1, col2, col3 = st.columns([1, 2, 1])
@@ -284,6 +220,34 @@ def display_tool_result(result_type: str, data: dict):
 
     except Exception as e:
         st.error(f"Error displaying tool result: {str(e)}")
+
+        
+def display_chat():
+    """Display chat history with proper formatting"""
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            # Display regular message content
+            st.write(message["content"])
+            
+            # Safely handle metadata
+            metadata = message.get("metadata", {})
+            if metadata is not None:  # Add this check
+                # Display tool results if present
+                if metadata.get("tool_used") and metadata.get("tool_result"):
+                    display_tool_result(
+                        metadata["tool_used"],
+                        metadata["tool_result"]
+                    )
+                
+                # Show metadata in expander if not empty
+                if metadata:
+                    with st.expander("Response Details"):
+                        st.json(metadata)
+            
+            # Display timestamp if present
+            if "timestamp" in message:
+                st.caption(f"Time: {message['timestamp']}")
+
 
 
 def main():

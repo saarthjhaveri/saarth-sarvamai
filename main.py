@@ -45,7 +45,7 @@ async def answer_question(query: Query):
     Question: {query.question}"""
     
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+         model="gpt-4o",
         messages=[
             {"role": "system", "content": "You are a helpful physics teacher."},
             {"role": "user", "content": prompt}
@@ -86,7 +86,7 @@ async def smart_answer_question(query: Query):
             system_prompt = "You are a helpful assistant."
 
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+             model="gpt-4o",
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}
@@ -148,7 +148,7 @@ async def learning_tools_qa(query: Query):
             )
 
             print("final_response is ", final_response)
-            
+
             
             return QueryResponse(
                 answer=final_response,
@@ -161,7 +161,7 @@ async def learning_tools_qa(query: Query):
         else:
             # Fall back to regular Q&A if no tool is applicable
             response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
+                 model="gpt-4o",
                 messages=[
                     {"role": "system", "content": "You are a helpful teacher."},
                     {"role": "user", "content": query.question}

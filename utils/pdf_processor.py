@@ -7,10 +7,8 @@ from extract_text_pdf import extract_and_save_text
 from clean_text import clean_text, save_cleaned_chunks
 from generate_embeddings import generate_embeddings, save_embeddings
 from store_embeddings import (
-    create_chroma_db, 
     store_embeddings_in_chroma, 
-    load_embeddings, 
-    clear_vector_db
+    load_embeddings
 )
 
 class PDFProcessor:

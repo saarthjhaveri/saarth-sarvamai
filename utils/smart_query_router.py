@@ -176,9 +176,6 @@ class SmartQueryRouter:
         best_category = max(similarities.items(), key=lambda x: x[1])
         confidence = float(best_category[1])
         
-        print( "category", best_category[0])
-        print("confidentce ", confidence)
-        print("requires context ",best_category[0] in ["document_query"] )
         
         # Simplified return type to match main.py and streamlit expectations
         return {

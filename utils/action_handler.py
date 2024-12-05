@@ -182,7 +182,6 @@ class ActionHandler:
             print(f"Error generating practice problems: {str(e)}")
             return {"error": "Failed to generate practice problems", "details": str(e)}
         
-
     async def _create_concept_map(self, parameters: Dict[str, Any], context: str) -> Dict[str, Any]:
         """Create a concept map showing relationships"""
         prompt = f"""Create a concept map centered on {parameters.get('central_concept')}.

@@ -67,7 +67,7 @@ class APIClient:
             return response.json()
         except requests.exceptions.RequestException as e:
             raise Exception(f"Error getting answer: {str(e)}")
-
+        
 def init_session_state():
     """Initialize session state variables"""
     if 'chat_history' not in st.session_state:
@@ -75,7 +75,10 @@ def init_session_state():
     if 'pdf_processed' not in st.session_state:
         st.session_state.pdf_processed = False
     if 'current_mode' not in st.session_state:
-        st.session_state.current_mode = "smart_qa"
+        st.session_state.current_mode = "Smart Q&A"
+    if 'last_mode' not in st.session_state:
+        st.session_state.last_mode = "Smart Q&A"
+
 
 def add_message(role: str, content: str, metadata: Optional[dict] = None, audio_data: Optional[bytes] = None):
     """Add a message to chat history"""
@@ -481,7 +484,19 @@ def process_user_input(input_text: str, input_type: str = "text", language_code:
     
     with st.spinner("Processing..."):
         try:
-            response = APIClient.ask(input_text)
+            # Route to correct API endpoint based on mode
+            if st.session_state.current_mode == "Basic Q&A":
+                response = APIClient.ask(input_text)
+            elif st.session_state.current_mode == "Smart Q&A":
+                response = APIClient.smart_ask(input_text)
+            else:  # Learning Tools
+                response = APIClient.learning_tools_qa(input_text)
+                
+                print("response from api to display is ", response)
+                # Special handling for learning tools response
+                if "tool_result" in response:
+                    display_tool_result(response["tool_type"], response["tool_result"])
+                    return
             
             # Convert response to audio if input was voice
             audio_data = None
@@ -503,7 +518,7 @@ def process_user_input(input_text: str, input_type: str = "text", language_code:
                 "assistant",
                 response["answer"],
                 metadata={
-                    "query_type": "basic_qa",
+                    "query_type": st.session_state.current_mode,
                     "confidence": response.get("confidence", 1.0),
                     "context_used": response.get("context_used", True)
                 },
@@ -595,6 +610,10 @@ def main():
             ["Basic Q&A", "Smart Q&A", "Learning Tools"],
             index=1  # Default to Smart Q&A
         )
+        if st.session_state.current_mode != st.session_state.last_mode:
+            st.session_state.chat_history = []  # Clear chat history on mode change
+            st.session_state.last_mode = st.session_state.current_mode
+            st.rerun()
 
     # Main chat interface
     st.header("Chat")

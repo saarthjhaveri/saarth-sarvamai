@@ -5,7 +5,7 @@ from typing import Optional
 from utils.action_handler import ActionHandler
 from utils.smart_query_router import SmartQueryRouter
 from utils.pdf_processor import PDFProcessor
-from store_embeddings import query_similar_chunks
+from utils.embeddings.store_embeddings import query_similar_chunks
 import json
 
 DEFAULT_PDF_PATH= "ncert_ch11.pdf"

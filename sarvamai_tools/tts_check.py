@@ -34,6 +34,8 @@ def text_to_speech(
         except Exception as e:
             raise Exception(f"Translation failed: {str(e)}")
     
+    text = text[:500]
+    
     url = "https://api.sarvam.ai/text-to-speech"
     
     payload = {

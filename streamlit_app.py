@@ -9,7 +9,13 @@ import tempfile
 from audio_recorder_streamlit import audio_recorder
 from sarvamai_tools.stt_check import transcribe_and_translate_audio
 from sarvamai_tools.tts_check import text_to_speech
+import logging
 
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # API endpoint configurations
 API_BASE_URL = "http://localhost:8000"
@@ -67,7 +73,8 @@ class APIClient:
             return response.json()
         except requests.exceptions.RequestException as e:
             raise Exception(f"Error getting answer: {str(e)}")
-        
+
+
 def init_session_state():
     """Initialize session state variables"""
     if 'chat_history' not in st.session_state:
@@ -78,6 +85,13 @@ def init_session_state():
         st.session_state.current_mode = "Smart Q&A"
     if 'last_mode' not in st.session_state:
         st.session_state.last_mode = "Smart Q&A"
+    if 'css_loaded' not in st.session_state:
+        st.session_state.css_loaded = False
+    if 'current_tool_result' not in st.session_state:
+        st.session_state.current_tool_result = None
+    if 'current_tool_type' not in st.session_state:
+        st.session_state.current_tool_type = None
+
 
 
 def add_message(role: str, content: str, metadata: Optional[dict] = None, audio_data: Optional[bytes] = None):
@@ -91,9 +105,21 @@ def add_message(role: str, content: str, metadata: Optional[dict] = None, audio_
     })
 
 def display_tool_result(result_type: str, data: dict):
+
+    logger.info(f"Displaying tool result for type: {result_type}")
+    logger.debug(f"Received data: {json.dumps(data, indent=2)}")
+
+
     """Display various tool results in an organized manner"""
     try:
+        print("data for display we are still outside if conditions  is \n\n", data)
         if result_type == "create_flashcards":
+            logger.info("Processing flashcards display")
+            flashcards = data.get("flashcards", [])
+            logger.debug(f"Found {len(flashcards)} flashcards")
+            
+            
+    
             st.subheader("Flashcards")
             flashcards = data.get("flashcards", [])
             
@@ -453,6 +479,10 @@ def display_tool_result(result_type: str, data: dict):
 def display_chat():
     """Display chat history with proper formatting"""
     for message in st.session_state.chat_history:
+        # Skip displaying messages from learning tools as they are handled separately
+        if message.get("metadata", {}).get("query_type") == "learning_tool":
+            continue
+            
         with st.chat_message(message["role"]):
             # Display regular message content
             st.write(message["content"])
@@ -475,94 +505,92 @@ def display_chat():
                 st.caption(f"Time: {message['timestamp']}")
 
 
-
 def process_user_input(input_text: str, input_type: str = "text", language_code: str = "en-IN"):
-    """Process user input and get response"""
-    print("inside processing user input ", input_text)
+    logger.info(f"Processing user input - Type: {input_type}, Language: {language_code}")
+    logger.debug(f"Input text: {input_text}")
 
     add_message("user", input_text)
     
     with st.spinner("Processing..."):
         try:
-            # Route to correct API endpoint based on mode
-            if st.session_state.current_mode == "Basic Q&A":
-                response = APIClient.ask(input_text)
-            elif st.session_state.current_mode == "Smart Q&A":
-                response = APIClient.smart_ask(input_text)
-            else:  # Learning Tools
+            # Handle Learning Tools mode first
+            if st.session_state.current_mode == "Learning Tools":
+                logger.info("Using Learning Tools endpoint")
                 response = APIClient.learning_tools_qa(input_text)
+                logger.debug(f"Learning Tools response: {json.dumps(response, indent=2)}")
                 
-                print("response from api to display is ", response)
-                # Special handling for learning tools response
-                if "tool_result" in response:
-                    display_tool_result(response["tool_type"], response["tool_result"])
-                    return
-            
-            # Convert response to audio if input was voice
-            audio_data = None
-            if input_type == "voice":
-                try:
-                    response_text = response["answer"][:500]
-                    audio_base64 = text_to_speech(
-                        text=response_text,
-                        target_language=language_code,
-                        speaker="meera"
+                if "tool_result" in response and "tool_used" in response:
+                    logger.info(f"Tool used: {response['tool_used']}")
+
+                    # Store the tool result and type in session state
+                    st.session_state.current_tool_result = response["tool_result"]
+                    st.session_state.current_tool_type = response["tool_used"]
+                    
+                    
+                    # Add the assistant's response to chat history
+                    add_message(
+                        "assistant",
+                        response["answer"],
+                        metadata={
+                            "query_type": response.get("query_type", "learning_tool"),
+                            "confidence": response.get("confidence", 1.0),
+                            "context_used": response.get("context_used", True),
+                            "tool_used": response.get("tool_used"),
+                        }
                     )
-                    if audio_base64:
-                        audio_data = base64.b64decode(audio_base64)
-                except Exception as e:
-                    st.warning(f"Could not generate audio response: {str(e)}")
-            
-            # Store the message in session state
-            add_message(
-                "assistant",
-                response["answer"],
-                metadata={
-                    "query_type": st.session_state.current_mode,
-                    "confidence": response.get("confidence", 1.0),
-                    "context_used": response.get("context_used", True)
-                },
-                audio_data=audio_data
-            )
-            
-            # Display the latest message immediately
-            with st.chat_message("assistant"):
-                st.write(response["answer"])
-                if audio_data:
-                    st.audio(audio_data, format="audio/wav")
+                    
+                    # Display tool result and rerun
+                    display_tool_result(response["tool_used"], response["tool_result"])
+                    return
+            else:
+                # Handle other modes (Basic Q&A and Smart Q&A)
+                if st.session_state.current_mode == "Basic Q&A":
+                    response = APIClient.ask(input_text)
+                else:  # Smart Q&A
+                    response = APIClient.smart_ask(input_text)
                 
-            # Force refresh to update the full chat history
-            st.rerun()
-            
+                # Convert response to audio if input was voice
+                audio_data = None
+                if input_type == "voice":
+                    try:
+                        response_text = response["answer"][:500]
+                        audio_base64 = text_to_speech(
+                            text=response_text,
+                            target_language=language_code,
+                            speaker="meera"
+                        )
+                        if audio_base64:
+                            audio_data = base64.b64decode(audio_base64)
+                    except Exception as e:
+                        st.warning(f"Could not generate audio response: {str(e)}")
+                
+                # Store the message in session state
+                add_message(
+                    "assistant",
+                    response["answer"],
+                    metadata={
+                        "query_type": response.get("query_type", st.session_state.current_mode),
+                        "confidence": response.get("confidence", 1.0),
+                        "context_used": response.get("context_used", True)
+                    },
+                    audio_data=audio_data
+                )
+                
+                # Display the latest message immediately
+                with st.chat_message("assistant"):
+                    st.write(response["answer"])
+                    if audio_data:
+                        st.audio(audio_data, format="audio/wav")
+                    
+                st.rerun()
+                
         except Exception as e:
             st.error(f"Error: {str(e)}")
 
-def display_chat():
-    """Display chat history with proper formatting"""
-    for message in st.session_state.chat_history:
-        with st.chat_message(message["role"]):
-            # Display regular message content
-            st.write(message["content"])
-
-            # Display audio if available
-            if message.get("audio_data") is not None:
-                try:
-                    st.audio(message["audio_data"], format="audio/wav")
-                except Exception as e:
-                    st.error(f"Error playing audio: {str(e)}")
-            
-            # Safely handle metadata
-            metadata = message.get("metadata", {})
-            if metadata is not None and metadata:
-                with st.expander("Response Details"):
-                    st.json(metadata)
-            
-            # Display timestamp if present
-            if "timestamp" in message:
-                st.caption(f"Time: {message['timestamp']}")
 
 def main():
     st.set_page_config(page_title="PDF Learning Assistant", layout="wide")
+
     st.title("PDF Learning Assistant")
     
     # Initialize session state
@@ -618,6 +646,11 @@ def main():
     # Main chat interface
     st.header("Chat")
     display_chat()
+
+    # Display current tool result if it exists
+    if st.session_state.current_tool_result and st.session_state.current_tool_type:
+        display_tool_result(st.session_state.current_tool_type, st.session_state.current_tool_result)
+
     
     # Input area
      # Input area

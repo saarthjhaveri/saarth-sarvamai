@@ -3,10 +3,10 @@ import shutil
 from typing import Optional
 from chromadb.api.models.Collection import Collection
 
-from extract_text_pdf import extract_and_save_text
-from clean_text import clean_text, save_cleaned_chunks
-from generate_embeddings import generate_embeddings, save_embeddings
-from store_embeddings import (
+from utils.filter.extract_text_pdf import extract_and_save_text
+from utils.filter.clean_text import clean_text, save_cleaned_chunks
+from utils.embeddings.generate_embeddings import generate_embeddings, save_embeddings
+from utils.embeddings.store_embeddings import (
     store_embeddings_in_chroma, 
     load_embeddings
 )

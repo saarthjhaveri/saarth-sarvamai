@@ -1,6 +1,6 @@
 # saarth-sarvamai
 This repo includes the assignment task for sarvam ai engineering role  https://docs.google.com/document/d/1y6Ol_9cLP1VPrHUR7NfXcYtAECZRXAhmmTKM5sc24HQ/edit?tab=t.0
-
+Here is the brief video about the working of the system https://www.loom.com/share/6bcb3aaf50a74603904a5cd8fb500b8d
 
 # Saarth-Sarvamai
 
